@@ -31,13 +31,10 @@ process.on('SIGINT', function () {  //this function will run jst before app is c
 // Db Schemas & Models
 
 var userSchema = new mongoose.Schema({
-    name: { type: String },
+    userName: { type: String },
     email: { type: String },
     password: { type: String },
-    phone: { type: String },
-    gender: { type: String },
     createdOn: { type: Date, default: Date.now },
-    activeSince: Date
 });
 
 var usersModel = mongoose.model("users", userSchema);
