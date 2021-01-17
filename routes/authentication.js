@@ -72,7 +72,7 @@ authRoutes.post("/login", (req, res) => {
             })
         }
         if (doc) {
-            Bcrypt.varifyHash(JSON.stringify(req.body.password), doc.password)
+            bcrypt.varifyHash(JSON.stringify(req.body.password), doc.password)
                 .then(isMatched => {
                     if (isMatched) {
                         let tokenData =
@@ -106,11 +106,5 @@ authRoutes.post("/login", (req, res) => {
         }
     })
 })
-
-
-
-
-
 //////////////////
-
 module.exports = authRoutes;
