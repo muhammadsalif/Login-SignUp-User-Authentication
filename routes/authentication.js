@@ -78,9 +78,9 @@ authRoutes.post("/login", (req, res) => {
                         let tokenData =
                             jwt.sign(
                                 {
-                                    email: req.body.email,
-                                    userName: req.body.userName,
-                                    password: req.body.password
+                                    id: doc._id,
+                                    email: doc.email,
+                                    userName: doc.userName,
                                 }, SERVER_SECRET
                             );
                         res.cookie('jToken', tokenData, {
@@ -106,5 +106,14 @@ authRoutes.post("/login", (req, res) => {
         }
     })
 })
+
+authRoutes.post("/logout", (req, res) => {
+    res.cookie('jToken', "", {
+        maxAge: 86_400_000,
+        httpOnly: true
+    });
+    res.send("logout success");
+})
+
 //////////////////
 module.exports = authRoutes;
