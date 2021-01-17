@@ -45,3 +45,4 @@ var usersModel = mongoose.model("users", userSchema);
 module.exports = {
     usersModel, //or users only
     // orderModel: orderModel
+}
