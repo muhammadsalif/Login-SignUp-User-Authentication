@@ -5,11 +5,9 @@ const cookieParser = require("cookie-parser");
 const app = express()
 var jwt = require('jsonwebtoken');
 
-
 const authRoutes = require("./routes/authentication")
 const { port, SERVER_SECRET } = require("./cors/index")
 var { usersModel } = require("./Database/models");
-
 
 const server = http.createServer(app)
 

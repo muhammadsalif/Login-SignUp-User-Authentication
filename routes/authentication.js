@@ -1,12 +1,16 @@
 var express = require("express");
 var bcrypt = require('bcrypt-inzi');
 var jwt = require('jsonwebtoken');
+var postmark = require("postmark");
+var {POST_MARK_API_KEY} = require('../secret')
+
 var { SERVER_SECRET } = require('../cors/index')
 
 // Importing database models
-var { usersModel } = require("../Database/models");
+var { usersModel, otpModel } = require("../Database/models");
 
 var authRoutes = express.Router();
+var client = new postmark.Client(POST_MARK_API_KEY);
 
 ///// Your API's here
 authRoutes.post("/signup", (req, res) => {
@@ -115,5 +119,126 @@ authRoutes.post("/logout", (req, res) => {
     res.send("logout success");
 })
 
+authRoutes.post("/forget-password", (req, res, next) => {
+
+    if (!req.body.email) {
+        res.status(403).send(`
+            please send email in json body.
+            e.g:
+            {
+                "email": "abc@gmail.com"
+            }`)
+        return;
+    }
+
+    usersModel.findOne({ email: req.body.email },
+        function (err, doc) {
+            if (err) {
+                res.status(500).send({
+                    message: "Internal server error"
+                });
+            } else if (doc) {
+                const otp = Math.floor(getRandomArbitrary(11111, 99999))
+                bcrypt.stringToHash(otp)
+                    .then(hash => {
+                        otpModel.create({
+                            email: req.body.email,
+                            otpCode: hash
+                        }).then(() => {
+
+                            client.sendEmail({
+                                "From": "salif_student@sysborg.com",
+                                "To": req.body.email,
+                                "Subject": "Reset your password",
+                                "TextBody": `Here is your pasword reset code: ${otp}`
+
+                            }).then((status) => {
+                                console.log("status: ", status);
+                                res.send("email sent with otp")
+
+                            }).catch((err) => {
+                                console.log("error in creating otp: ", err);
+                                res.status(500).send("unexpected error ")
+                            })
+
+                        })
+                    }).catch((err) => {
+                        console.log("error in creating otp: ", err);
+                        res.status(500).send("unexpected error ")
+                    })
+            } else {
+                res.status(403).send({
+                    message: "user not found"
+                });
+            }
+        });
+})
+
+authRoutes.post("/forget-password-step-2", (req, res, next) => {
+
+    if (!req.body.email || !req.body.otpCode || !req.body.newPassword) {
+        res.status(403).send(`
+            please send email & otp in json body.
+            e.g:
+            {
+                "email": "abc@gmail.com",
+                "newPassword": "xxxxxx",
+                "otp": "xxxxx" 
+            }`)
+        return;
+    }
+
+    usersModel.findOne({ email: req.body.email },
+        function (err, userDoc) {
+            if (err) {
+                res.status(500).send({
+                    message: "Internal server error"
+                });
+            } else if (userDoc) {
+                
+                otpModel.findOne({ email: req.body.email }, function (err, otpDoc) {
+                    if (err) {
+                        res.status(500).send({
+                            message: "Internal server error"
+                        })
+                    }
+                    else if (otpDoc) {
+                        otpData = otpDoc[otpDoc.length - 1]
+
+                        const now = new Date().getTime();
+                        const otpIat = new Date(otpData.createdOn).getTime(); // 2021-01-06T13:08:33.657+0000
+                        const diff = now - otpIat; // 300000 5 minute
+                        if (otpDoc.otpCode === req.body.otpCode && diff < 300000) { // correct otp code
+                            otpDoc.remove()
+                            bcrypt.stringToHash(req.body.newPassword)
+                                .then((passwordHash) => {
+                                    userDoc.update({ password: passwordHash }, {}, function (err, data) {
+                                        res.send("password updated");
+                                    })
+                                })
+                        } else {
+                            res.status(401).send({
+                                message: "Incorrect OTP"
+                            });
+                        }
+                    }
+                    else if (!otpDoc) {
+                        res.status(403).send({
+                            message: "Email does not exists"
+                        })
+                    }
+                })
+            
+            } else if(!userDoc) {
+                res.status(403).send({
+                    message: "user not found"
+                });
+            }
+        });
+})
+
+function getRandomArbitrary(min, max) {
+    return Math.random() * (max - min) + min;
+}
 //////////////////
 module.exports = authRoutes;
