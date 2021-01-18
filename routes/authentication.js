@@ -2,7 +2,7 @@ var express = require("express");
 var bcrypt = require('bcrypt-inzi');
 var jwt = require('jsonwebtoken');
 var postmark = require("postmark");
-var {POST_MARK_API_KEY} = require('../secret')
+var { POST_MARK_API_KEY } = require('../secret')
 
 var { SERVER_SECRET } = require('../cors/index')
 
@@ -98,6 +98,7 @@ authRoutes.post("/login", (req, res) => {
                                 userName: req.body.userName,
                             }
                         });
+                        console.log(req.body.email, "login success")
                     }
                     else {
                         res.status(401).send({
@@ -143,7 +144,7 @@ authRoutes.post("/forget-password", (req, res, next) => {
                     .then(hash => {
                         otpModel.create({
                             email: req.body.email,
-                            otpCode: hash
+                            otpCode: otp
                         }).then(() => {
 
                             client.sendEmail({
@@ -160,7 +161,6 @@ authRoutes.post("/forget-password", (req, res, next) => {
                                 console.log("error in creating otp: ", err);
                                 res.status(500).send("unexpected error ")
                             })
-
                         })
                     }).catch((err) => {
                         console.log("error in creating otp: ", err);
@@ -175,15 +175,14 @@ authRoutes.post("/forget-password", (req, res, next) => {
 })
 
 authRoutes.post("/forget-password-step-2", (req, res, next) => {
-
-    if (!req.body.email || !req.body.otpCode || !req.body.newPassword) {
+    if (!req.body || !req.body.email || !req.body.otpCode || !req.body.newPassword) {
         res.status(403).send(`
             please send email & otp in json body.
             e.g:
             {
                 "email": "abc@gmail.com",
                 "newPassword": "xxxxxx",
-                "otp": "xxxxx" 
+                "otpCode": "xxxxx" 
             }`)
         return;
     }
@@ -195,8 +194,8 @@ authRoutes.post("/forget-password-step-2", (req, res, next) => {
                     message: "Internal server error"
                 });
             } else if (userDoc) {
-                
-                otpModel.findOne({ email: req.body.email }, function (err, otpDoc) {
+
+                otpModel.find({ email: req.body.email }, function (err, otpDoc) {
                     if (err) {
                         res.status(500).send({
                             message: "Internal server error"
@@ -208,8 +207,8 @@ authRoutes.post("/forget-password-step-2", (req, res, next) => {
                         const now = new Date().getTime();
                         const otpIat = new Date(otpData.createdOn).getTime(); // 2021-01-06T13:08:33.657+0000
                         const diff = now - otpIat; // 300000 5 minute
-                        if (otpDoc.otpCode === req.body.otpCode && diff < 300000) { // correct otp code
-                            otpDoc.remove()
+                        if (otpData.otpCode === req.body.otpCode && diff < 300000) { // correct otp code
+                            otpData.remove()
                             bcrypt.stringToHash(req.body.newPassword)
                                 .then((passwordHash) => {
                                     userDoc.update({ password: passwordHash }, {}, function (err, data) {
@@ -228,8 +227,8 @@ authRoutes.post("/forget-password-step-2", (req, res, next) => {
                         })
                     }
                 })
-            
-            } else if(!userDoc) {
+
+            } else if (!userDoc) {
                 res.status(403).send({
                     message: "user not found"
                 });
