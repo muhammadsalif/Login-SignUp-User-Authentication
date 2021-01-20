@@ -4,13 +4,13 @@ const http = require("http");
 const cookieParser = require("cookie-parser");
 const app = express()
 var jwt = require('jsonwebtoken');
-
+var cors=require("cors")
 const authRoutes = require("./routes/authentication")
 const { port, SERVER_SECRET } = require("./cors/index")
 var { usersModel } = require("./Database/models");
 
 const server = http.createServer(app)
-
+app.use(cors())
 app.use(bodyParser.json());
 app.use(cookieParser())
 
