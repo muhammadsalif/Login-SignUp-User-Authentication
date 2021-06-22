@@ -11,7 +11,7 @@ var { usersModel } = require("./database/models");
 
 const server = http.createServer(app)
 app.use(cors())
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(cookieParser())
 
 app.use("/auth", authRoutes)
